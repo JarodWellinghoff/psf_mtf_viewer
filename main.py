@@ -128,7 +128,7 @@ class PSFMTFViewer:
         # === Column 1: Basic Setup ===
         ax_size = tb_axis(0, 0)
         ax_fov = tb_axis(0, 1)
-        ax_mode = tb_axis(0, 2)  # “gaussian / ring / dog”
+        ax_mode = tb_axis(0, 2)  # "gaussian / ring / dog"
         ax_bg = tb_axis(0, 3)
         ax_norm = tb_axis(0, 4)
         self.tb_size = TextBox(ax_size, "size:", initial=str(self.size))
@@ -140,24 +140,29 @@ class PSFMTFViewer:
         self.tb_norm = TextBox(ax_norm, "normalize:", initial=self.normalize)
 
         # === Column 2: Mode Specific Settings ===
-        # Gaussian
-        # if self.mode == "gaussian":
-        #     ax_pi = tb_axis(1, 0)
-        #     ax_pj = tb_axis(1, 1)
-        # self.tb_pi = TextBox(ax_pi, "p_i (pix^-1):", initial=f"{self.p_i:.6f}")
-        # self.tb_pj = TextBox(ax_pj, "p_j (pix^-1):", initial=f"{self.p_j:.6f}")
+        # Store axes and textboxes for each mode to control visibility
+        self.mode_axes = {}
+        self.mode_textboxes = {}
 
-        # DoG
-        # elif self.mode == "dog":
-        # ax_alpha = tb_axis(1, 0)
-        # ax_s0 = tb_axis(1, 1)
-        # ax_s1 = tb_axis(1, 2)
-        # self.tb_alpha = TextBox(ax_alpha, "alpha:", initial=f"{self.alpha:.3f}")
-        # self.tb_s0 = TextBox(ax_s0, "sigma0_mm:", initial=f"{self.sigma0_mm:.3f}")
-        # self.tb_s1 = TextBox(ax_s1, "sigma1_mm:", initial=f"{self.sigma1_mm:.3f}")
+        # Gaussian parameters
+        ax_pi = tb_axis(1, 0)
+        ax_pj = tb_axis(1, 1)
+        self.tb_pi = TextBox(ax_pi, "p_i (pix^-1):", initial=f"{self.p_i:.6f}")
+        self.tb_pj = TextBox(ax_pj, "p_j (pix^-1):", initial=f"{self.p_j:.6f}")
+        self.mode_axes["gaussian"] = [ax_pi, ax_pj]
+        self.mode_textboxes["gaussian"] = [self.tb_pi, self.tb_pj]
 
-        # Ring ===
-        # elif self.mode == "ring":
+        # DoG parameters
+        ax_alpha = tb_axis(1, 0)
+        ax_s0 = tb_axis(1, 1)
+        ax_s1 = tb_axis(1, 2)
+        self.tb_alpha = TextBox(ax_alpha, "alpha:", initial=f"{self.alpha:.3f}")
+        self.tb_s0 = TextBox(ax_s0, "sigma0_mm:", initial=f"{self.sigma0_mm:.3f}")
+        self.tb_s1 = TextBox(ax_s1, "sigma1_mm:", initial=f"{self.sigma1_mm:.3f}")
+        self.mode_axes["dog"] = [ax_alpha, ax_s0, ax_s1]
+        self.mode_textboxes["dog"] = [self.tb_alpha, self.tb_s0, self.tb_s1]
+
+        # Ring parameters
         ax_r0 = tb_axis(1, 0)
         ax_sigma = tb_axis(1, 1)
         ax_cw = tb_axis(1, 2)
@@ -168,18 +173,14 @@ class PSFMTFViewer:
         self.tb_cs = TextBox(
             ax_cs, "core_sigma_mm:", initial=f"{self.core_sigma_mm:.3f}"
         )
+        self.mode_axes["ring"] = [ax_r0, ax_sigma, ax_cw, ax_cs]
+        self.mode_textboxes["ring"] = [self.tb_r0, self.tb_sigma, self.tb_cw, self.tb_cs]
 
-        # t_i/t_j default to center; show "center" initially
-        # self.tb_ti = TextBox(ax_ti, "t_i (row, px):", initial="center")
-        # self.tb_tj = TextBox(ax_tj, "t_j (col, px):", initial="center")
-
-        # Bind
+        # Bind event handlers
         self.tb_size.on_submit(self.on_size_change)
         self.tb_fov.on_submit(self.on_fov_change)
-        # self.tb_pi.on_submit(self.on_pi_change)
-        # self.tb_pj.on_submit(self.on_pj_change)
-        # self.tb_ti.on_submit(self.on_ti_change)
-        # self.tb_tj.on_submit(self.on_tj_change)
+        self.tb_pi.on_submit(self.on_pi_change)
+        self.tb_pj.on_submit(self.on_pj_change)
         self.tb_bg.on_submit(self.on_bg_change)
         self.tb_norm.on_submit(self.on_norm_change)
         self.tb_mode.on_submit(self.on_mode_change)
@@ -187,24 +188,21 @@ class PSFMTFViewer:
         self.tb_sigma.on_submit(self.on_sigma_change)
         self.tb_cw.on_submit(self.on_cw_change)
         self.tb_cs.on_submit(self.on_cs_change)
-        self.tb_mode.on_submit(
-            lambda t: (setattr(self, "mode", t.strip().lower()), self.update_plots())
-        )
-        # self.tb_alpha.on_submit(
-        #     lambda t: (setattr(self, "alpha", float(t)), self.update_plots())
-        # )
-        # self.tb_s0.on_submit(
-        #     lambda t: (
-        #         setattr(self, "sigma0_mm", max(1e-6, float(t))),
-        #         self.update_plots(),
-        #     )
-        # )
-        # self.tb_s1.on_submit(
-        #     lambda t: (
-        #         setattr(self, "sigma1_mm", max(1e-6, float(t))),
-        #         self.update_plots(),
-        #     )
-        # )
+        self.tb_alpha.on_submit(self.on_alpha_change)
+        self.tb_s0.on_submit(self.on_s0_change)
+        self.tb_s1.on_submit(self.on_s1_change)
+
+        # Set initial visibility based on current mode
+        self.update_parameter_visibility()
+
+    def update_parameter_visibility(self):
+        """Show/hide parameter textboxes based on the current mode."""
+        for mode, axes in self.mode_axes.items():
+            visible = (mode == self.mode)
+            for ax in axes:
+                ax.set_visible(visible)
+        # Redraw the figure to reflect visibility changes
+        self.fig.canvas.draw_idle()
 
     # Handlers
     def on_size_change(self, text):
@@ -283,6 +281,7 @@ class PSFMTFViewer:
         val = (text or "").strip().lower()
         if val in ("ring", "gaussian", "dog"):
             self.mode = val
+            self.update_parameter_visibility()
             self.update_plots()
 
     def on_r0_change(self, text):
@@ -310,6 +309,27 @@ class PSFMTFViewer:
     def on_cs_change(self, text):
         try:
             self.core_sigma_mm = max(1e-6, float(text))
+            self.update_plots()
+        except ValueError:
+            pass
+
+    def on_alpha_change(self, text):
+        try:
+            self.alpha = float(text)
+            self.update_plots()
+        except ValueError:
+            pass
+
+    def on_s0_change(self, text):
+        try:
+            self.sigma0_mm = max(1e-6, float(text))
+            self.update_plots()
+        except ValueError:
+            pass
+
+    def on_s1_change(self, text):
+        try:
+            self.sigma1_mm = max(1e-6, float(text))
             self.update_plots()
         except ValueError:
             pass
