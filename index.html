@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSF/MTF Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fft.js/4.0.3/fft.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PSF/MTF Viewer</h1>
+            <p>Interactive Point Spread Function and Modulation Transfer Function Analysis</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Sidebar: Parameters -->
+            <aside class="parameters-panel">
+                <h2>Parameters</h2>
+
+                <div class="param-section">
+                    <h3>Basic Setup</h3>
+
+                    <div class="param-group">
+                        <label for="size">Size (pixels):</label>
+                        <input type="number" id="size" value="513" min="64" max="2048" step="1">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="wire_fov_mm">Wire FOV (mm):</label>
+                        <input type="number" id="wire_fov_mm" value="50.0" min="1" max="1000" step="0.1">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="background">Background:</label>
+                        <input type="number" id="background" value="0.0" min="0" max="1" step="0.01">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="mode">PSF Mode:</label>
+                        <select id="mode">
+                            <option value="ring">Ring</option>
+                            <option value="gaussian">Gaussian</option>
+                            <option value="dog">DoG (Difference of Gaussians)</option>
+                        </select>
+                    </div>
+
+                    <div class="param-group">
+                        <label for="normalize">Normalize:</label>
+                        <select id="normalize">
+                            <option value="unit_energy">Unit Energy</option>
+                            <option value="peak_one">Peak One</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Gaussian Mode Parameters -->
+                <div class="param-section mode-params" id="gaussian-params">
+                    <h3>Gaussian Parameters</h3>
+
+                    <div class="param-group">
+                        <label for="p_i">p_i (pixel⁻¹):</label>
+                        <input type="number" id="p_i" value="0.2" min="0.001" max="10" step="0.001">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="p_j">p_j (pixel⁻¹):</label>
+                        <input type="number" id="p_j" value="0.2" min="0.001" max="10" step="0.001">
+                    </div>
+                </div>
+
+                <!-- Ring Mode Parameters -->
+                <div class="param-section mode-params" id="ring-params">
+                    <h3>Ring Parameters</h3>
+
+                    <div class="param-group">
+                        <label for="r0_mm">r0 (mm):</label>
+                        <input type="number" id="r0_mm" value="5.0" min="0.1" max="100" step="0.1">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="sigma_mm">sigma (mm):</label>
+                        <input type="number" id="sigma_mm" value="1.0" min="0.01" max="50" step="0.01">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="core_weight">Core Weight:</label>
+                        <input type="number" id="core_weight" value="0.5" min="0" max="1" step="0.01">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="core_sigma_mm">Core Sigma (mm):</label>
+                        <input type="number" id="core_sigma_mm" value="0.5" min="0.01" max="50" step="0.01">
+                    </div>
+                </div>
+
+                <!-- DoG Mode Parameters -->
+                <div class="param-section mode-params" id="dog-params">
+                    <h3>DoG Parameters</h3>
+
+                    <div class="param-group">
+                        <label for="alpha">Alpha:</label>
+                        <input type="number" id="alpha" value="0.1" min="0" max="1" step="0.01">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="sigma0_mm">Sigma 0 (mm):</label>
+                        <input type="number" id="sigma0_mm" value="1.0" min="0.01" max="50" step="0.01">
+                    </div>
+
+                    <div class="param-group">
+                        <label for="sigma1_mm">Sigma 1 (mm):</label>
+                        <input type="number" id="sigma1_mm" value="2.0" min="0.01" max="50" step="0.01">
+                    </div>
+                </div>
+
+                <button id="update-btn" class="update-button">Update Visualization</button>
+            </aside>
+
+            <!-- Right Side: Visualizations -->
+            <main class="visualization-panel">
+                <div class="plots-container">
+                    <div class="plot-wrapper">
+                        <h3>Point Spread Function (PSF)</h3>
+                        <div id="psf-plot" class="plot"></div>
+                    </div>
+
+                    <div class="plot-wrapper">
+                        <h3>2D Modulation Transfer Function (MTF)</h3>
+                        <div id="mtf-2d-plot" class="plot"></div>
+                    </div>
+
+                    <div class="plot-wrapper">
+                        <h3>1D MTF (Radial)</h3>
+                        <div id="mtf-1d-plot" class="plot"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="psf-calculations.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
